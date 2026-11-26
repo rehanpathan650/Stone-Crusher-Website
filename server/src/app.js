@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -113,16 +111,6 @@ export function createApp() {
     app.use(`/api/${name}`, requireAuth, crudRouter(name, cfg));
   }
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' }));
-
-  // Serve the built React app (production)
-  if (fs.existsSync(path.join(config.clientDist, 'index.html'))) {
-    app.use('/assets', express.static(path.join(config.clientDist, 'assets'), { immutable: true, maxAge: '1y', index: false }));
-    app.use(express.static(config.clientDist, { index: false, maxAge: '1h' }));
-    app.get('/{*splat}', (req, res) => {
-      res.setHeader('Cache-Control', 'no-cache');
-      res.sendFile(path.join(config.clientDist, 'index.html'));
-    });
-  }
 
   // Central error handler: consistent JSON, no stack traces or SQL leaked to clients
   // eslint-disable-next-line no-unused-vars

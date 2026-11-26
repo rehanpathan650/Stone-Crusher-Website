@@ -4,10 +4,10 @@ A full-stack web app for running a stone crusher business. It covers sales and d
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19 + Vite, React Router. Plain CSS design system with no UI framework |
-| API | Node.js 22, Express 5, Zod validation |
+| App | **Next.js 15** (App Router) with React 19 and Framer Motion. Plain CSS design system with no UI framework |
+| API | Node.js 22, Express 5, Zod validation, served by Next.js at `/api/*` (one app, one port) |
 | Database | SQLite for a single machine or a quick start. PostgreSQL for production, chosen with one setting (`DATABASE_URL`). Knex query builder and migrations |
-| Deployment | Docker, docker-compose (PostgreSQL + app + Caddy with automatic HTTPS) |
+| Deployment | **Vercel** (with a managed PostgreSQL such as Neon), or Docker / docker-compose (PostgreSQL + app + Caddy with automatic HTTPS) |
 
 ---
 
@@ -17,19 +17,19 @@ Requirements: [Node.js 20 or newer](https://nodejs.org).
 
 ```powershell
 cd "E:\Stone Crusher App"
-npm run setup
+npm install
 ```
 This installs the dependencies once.
 
 ```powershell
 npm run build
 ```
-This builds the web interface.
+This builds the app.
 
 ```powershell
 npm start
 ```
-This starts the app at http://localhost:4000.
+This starts the app at http://localhost:4000. Set `SETUP_TOKEN` in a `.env` file first if you want to choose the setup code yourself.
 
 1. On the first start, the console prints a **setup code**:
    `>>> First-run setup code: Xyz123...`
@@ -44,18 +44,33 @@ npm run seed:demo
 ```
 
 ### Development mode (live reload)
-Run these in two terminals:
 ```powershell
-npm run dev:api
+npm run dev
 ```
+Then open http://localhost:4000. Screens and API reload as you edit.
+
+### Tests
 ```powershell
-npm run dev:web
+npm test
 ```
-Then open http://localhost:5173. The web dev server sends `/api` requests to the API on port 4000.
+Starts a throwaway API and database and runs the integration suite (security, invoicing, weighbridge, machinery, payroll, reports, backup).
 
 ---
 
-## 2. Production deployment (server with a domain, HTTPS, PostgreSQL)
+## 2. Deploy on Vercel
+
+1. Push the project to GitHub, then on **vercel.com** choose **Add New → Project** and import the repository. Vercel detects Next.js; no build settings are needed.
+2. In the project, open **Storage → Create Database → Neon (Postgres)** and connect it. This adds `DATABASE_URL`.
+3. Under **Settings → Environment Variables** add:
+   * `SETUP_TOKEN`: a one-time code you choose, used to create the first admin account.
+   * `CRON_SECRET`: a long random text. Vercel sends it with the daily maintenance request (`vercel.json` → `/api/cron/daily`).
+4. **Deploy**, open the site and create the admin account with your setup code.
+
+On Vercel: the server region is Mumbai (`bom1` in `vercel.json`); pick the Neon region closest to it. There is no permanent disk, so the automatic daily backup files are off: use **Backup & Restore → Download backup now** and Neon's own backups. Restoring through the app works for backup files under 4.5 MB.
+
+---
+
+## 3. Production deployment on your own server (Docker, domain, HTTPS, PostgreSQL)
 
 Requirements: a Linux server or PC with Docker, and a domain name pointing to it (ports 80 and 443 open).
 
@@ -78,7 +93,7 @@ Open `https://your-domain`. Caddy obtains and renews the HTTPS certificate autom
 
 ---
 
-## 3. Security
+## 4. Security
 
 | Area | What's in place |
 |---|---|
@@ -92,7 +107,7 @@ Open `https://your-domain`. Caddy obtains and renews the HTTPS certificate autom
 | Business rules | Totals, GST and balances are always **recalculated on the server**. Party, material and stock checks run inside database transactions |
 | Headers | Helmet with a strict **Content-Security-Policy** (no inline scripts), X-Frame-Options, nosniff, HSTS over HTTPS, a Permissions-Policy that denies camera/microphone/location/payment, `no-store` on API responses |
 | Containers | The app runs as a non-root user on a **read-only filesystem** (only its data folder and `/tmp` are writable), with all Linux capabilities dropped and `no-new-privileges`. The database is never published to the host; the app port only on `127.0.0.1` |
-| Dependencies | `npm audit` reports 0 known vulnerabilities in server and client (check again with `npm audit` after updates) |
+| Dependencies | `npm audit` reports 0 known vulnerabilities (PostCSS is pinned to a patched version in package.json `overrides`) (check again with `npm audit` after updates) |
 | Audit | Sign-ins, failed sign-ins, lockouts, and every create, update, delete and export are recorded with user, time, IP and the changed fields |
 | Exports | CSV and Excel cells are escaped against spreadsheet formula injection. Every export is recorded in the audit log |
 | Uploads | The logo must be a PNG, JPEG or WebP of 300 KB or less. The file's real content is checked, not just its name |
@@ -112,7 +127,7 @@ Open `https://your-domain`. Caddy obtains and renews the HTTPS certificate autom
 
 ---
 
-## 4. Features
+## 5. Features
 
 **Sales & billing**
 * **GST tax invoices** numbered per financial year (`INV/2026-27/0001`). CGST + SGST within your state, IGST for other states (taken from the customer's GSTIN, or their state). HSN codes and amount in words. A **Bill of Supply** is printed when there's no GST.
@@ -163,9 +178,13 @@ Open `https://your-domain`. Caddy obtains and renews the HTTPS certificate autom
 * On a phone: a bottom bar with a big **Dispatch** button, and large touch targets. The app can be added to the home screen.
 * Motion is kept subtle and switches off if the phone or PC is set to reduce motion.
 
-## 5. Project layout
+## 6. Project layout
 ```
-client/            React app (src/pages, src/components, src/resources.jsx = module definitions)
+src/app/           Next.js routes: (app)/… screens with the sidebar, print/… printable documents
+src/pages/api/     /api/* → the Express API below
+src/middleware.js  strict Content-Security-Policy with a per-request nonce
+src/ui/            screens, components, design system (styles.css), resources.jsx = module definitions
+public/            icon, web-app manifest, service worker
 server/
   src/app.js       Express setup, security middleware, error handling
   src/auth/        sessions, CSRF, role permissions
@@ -176,6 +195,9 @@ server/
   src/lib/xlsx.js  dependency-free Excel writer
   src/resources.js validation schemas + business rules per module
   src/migrations/  database schema (one file per upgrade; never edit an old one)
+  src/startup.js   migrations, setup code, maintenance timers
+  src/index.js     standalone API server (used by the tests)
+  test/            integration tests (npm test)
   scripts/         seed-demo, create-admin
-Dockerfile, docker-compose.yml, Caddyfile
+next.config.mjs, vercel.json, Dockerfile, docker-compose.yml, Caddyfile
 ```

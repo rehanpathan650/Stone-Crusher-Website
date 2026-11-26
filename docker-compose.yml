@@ -36,7 +36,7 @@ services:
     # Hardening: read-only filesystem (only the data volume and /tmp are writable),
     # no extra Linux privileges, and none can be gained later.
     read_only: true
-    tmpfs: ["/tmp"]
+    tmpfs: ["/tmp", "/app/.next/cache"]
     cap_drop: ["ALL"]
     security_opt: ["no-new-privileges:true"]
     stop_grace_period: 15s

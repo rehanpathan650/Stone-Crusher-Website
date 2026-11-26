@@ -1,8 +1,12 @@
 **/node_modules
-client/dist
+.next
 server/data
+server/test
 .env
 **/.env
 .git
 .claude
-server/test
+*.sql
+*.db
+LOGINS.txt
+office-certificate.crt

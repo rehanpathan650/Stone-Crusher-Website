@@ -1,17 +1,38 @@
 {
-  "name": "stone-crusher-app",
-  "version": "2.0.0",
+  "name": "stone-crusher-manager",
+  "version": "3.0.0",
   "private": true,
-  "description": "Stone crusher business management: sales, production, stock, finance, payroll",
-  "scripts": {
-    "setup": "npm --prefix server install && npm --prefix client install",
-    "build": "npm --prefix client run build",
-    "start": "npm --prefix server start",
-    "dev:api": "npm --prefix server run dev",
-    "dev:web": "npm --prefix client run dev",
-    "seed:demo": "npm --prefix server run seed:demo",
-    "create-admin": "npm --prefix server run create-admin --",
-    "test": "npm --prefix server test"
+  "type": "module",
+  "description": "Stone crusher business management: dispatch, weighbridge, GST billing, stock, machinery, payroll and accounts",
+  "engines": {
+    "node": ">=20.9"
   },
-  "type": "module"
+  "scripts": {
+    "dev": "next dev -p 4000",
+    "build": "next build",
+    "start": "next start",
+    "test": "node server/test/run.mjs",
+    "seed:demo": "node server/scripts/seed-demo.js",
+    "create-admin": "node server/scripts/create-admin.js"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "better-sqlite3": "^13.2.0",
+    "compression": "^1.8.2",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "framer-motion": "14.14.0",
+    "helmet": "^8.3.0",
+    "knex": "^3.3.0",
+    "next": "15.5.29",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "overrides": {
+    "postcss": "^8.5.33"
+  }
 }

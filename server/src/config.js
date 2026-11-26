@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// SERVER_ROOT is set by the Next.js API route (bundled code no longer sits next to its files).
+const root = process.env.SERVER_ROOT ? path.resolve(process.env.SERVER_ROOT) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({ path: path.join(root, '.env'), quiet: true });
 const env = process.env.NODE_ENV || 'development';
 const isProd = env === 'production';
@@ -41,7 +42,6 @@ export const config = Object.freeze({
   apiRateLimitPerMinute: Number(process.env.API_RATE_LIMIT_PER_MINUTE || 600),
   loginRateLimit: Number(process.env.LOGIN_RATE_LIMIT || 20), // sign-in attempts per IP per 15 minutes
   setupToken: process.env.SETUP_TOKEN || '',
-  clientDist: path.resolve(root, process.env.CLIENT_DIST || '../client/dist'),
   // Automatic daily backups (JSON). Keep this folder on a persistent volume and copy it off the server regularly.
   backupDir: path.resolve(root, process.env.BACKUP_DIR || 'data/backups'),
   backupKeep: Math.max(1, Number(process.env.BACKUP_KEEP || 14)),
