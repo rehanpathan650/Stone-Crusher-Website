@@ -11,8 +11,10 @@ export const db = knex(
   isPg
     ? {
         client: 'pg',
+        // With DATABASE_SSL the server certificate is verified (protects against interception).
+        // A URL with ?sslmode=require (Neon, Supabase…) also turns on verified SSL by itself.
         connection: config.databaseSsl
-          ? { connectionString: config.databaseUrl, ssl: { rejectUnauthorized: false } }
+          ? { connectionString: config.databaseUrl, ssl: { rejectUnauthorized: !config.databaseSslInsecure } }
           : config.databaseUrl,
         pool: { min: 0, max: config.dbPoolMax },
       }

@@ -25,6 +25,11 @@ export const config = Object.freeze({
   // PostgreSQL in production: postgres://user:pass@host:5432/db  (empty = local SQLite file)
   databaseUrl: process.env.DATABASE_URL || '',
   databaseSsl: bool(process.env.DATABASE_SSL, false),
+  // Only for databases with self-signed certificates; managed databases (Neon etc.) have valid certificates and are verified.
+  databaseSslInsecure: bool(process.env.DATABASE_SSL_INSECURE, false),
+  // Running as serverless functions (Vercel): no local files, no timers.
+  serverless: Boolean(process.env.VERCEL),
+  cronSecret: process.env.CRON_SECRET || '',
   dbPoolMax: Number(process.env.DB_POOL_MAX || 10),
   sqliteFile: path.resolve(root, process.env.SQLITE_FILE || 'data/app.db'),
   trustProxy: trustProxy(process.env.TRUST_PROXY),

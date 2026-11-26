@@ -38,6 +38,11 @@ let setupToken = null;
 export async function initSetupToken() {
   const [{ count }] = await db('users').count({ count: 'id' });
   if (Number(count) > 0) return;
+  if (config.serverless && !config.setupToken) {
+    // Each serverless instance would invent a different random code, so a fixed one must be configured.
+    log.warn('No users exist yet. Set SETUP_TOKEN in the hosting environment to create the first admin.');
+    return;
+  }
   setupToken = config.setupToken || crypto.randomBytes(9).toString('base64url');
   log.info('No users exist yet. Open the app and create the admin account with this setup code.', { setupCode: setupToken });
   console.log(`\n  >>> First-run setup code: ${setupToken}\n`);
@@ -57,7 +62,8 @@ router.get('/status', async (req, res) => {
 router.post('/setup', loginLimiter, async (req, res) => {
   const body = z.object({ setupCode: z.string().max(200), name: z.string().trim().min(1, 'Enter your name').max(100), email, password: strongPassword }).parse(req.body ?? {});
   const [{ count }] = await db('users').count({ count: 'id' });
-  if (Number(count) > 0 || !setupToken) throw forbidden('Setup has already been completed.');
+  if (Number(count) > 0) throw forbidden('Setup has already been completed.');
+  if (!setupToken) throw new HttpError(503, 'Setup is not configured. Set SETUP_TOKEN in the server environment, then redeploy.', 'SETUP_NOT_CONFIGURED');
   checkPassword(body.password, body);
   const a = Buffer.from(body.setupCode.trim()), b = Buffer.from(setupToken);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) throw badRequest('Setup code is incorrect', { setupCode: 'Incorrect code — see the server console' });

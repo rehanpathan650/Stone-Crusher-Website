@@ -7,7 +7,8 @@ import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 import { config } from './config.js';
 import { db } from './db.js';
-import { loadSession, csrfProtect, requireAuth, requirePasswordChanged } from './auth/session.js';
+import crypto from 'node:crypto';
+import { loadSession, csrfProtect, requireAuth, requirePasswordChanged, purgeExpiredSessions } from './auth/session.js';
 import { HttpError } from './lib/errors.js';
 import { log } from './lib/util.js';
 import { RESOURCES } from './resources.js';
@@ -70,6 +71,18 @@ export function createApp() {
     } catch {
       res.status(503).json({ status: 'db_unavailable' });
     }
+  });
+
+  // Daily maintenance called by Vercel Cron (it sends "Authorization: Bearer $CRON_SECRET"). Docker uses timers instead.
+  app.get('/api/cron/daily', async (req, res) => {
+    const auth = String(req.get('authorization') || '');
+    const expected = `Bearer ${config.cronSecret}`;
+    if (!config.cronSecret || auth.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(auth), Buffer.from(expected))) {
+      return res.status(401).json({ error: 'Unauthorized', code: 'UNAUTHORIZED' });
+    }
+    const purged = await purgeExpiredSessions();
+    log.info('daily maintenance', { purgedSessions: purged });
+    res.json({ ok: true, purgedSessions: purged });
   });
 
   app.use('/api', rateLimit({

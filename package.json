@@ -10,6 +10,8 @@
     "dev:api": "npm --prefix server run dev",
     "dev:web": "npm --prefix client run dev",
     "seed:demo": "npm --prefix server run seed:demo",
-    "create-admin": "npm --prefix server run create-admin --"
-  }
+    "create-admin": "npm --prefix server run create-admin --",
+    "test": "npm --prefix server test"
+  },
+  "type": "module"
 }

@@ -91,9 +91,14 @@ check('data rolled back to the backup', parties === 0 && (await a.get('/sales?pa
 const nextSale = await a.post('/sales', { date: '2026-11-26', party_id: cust.id, material_id: m40.id, qty: 1, rate: 1000, mode: 'Cash', paid: 1000, allow_negative_stock: true });
 check('new records still insert after restore', nextSale.status === 201, nextSale.data);
 r = await a.post('/admin/backups/run');
-check('daily backup file written', r.status === 200 && r.data.rows.some(b => b.name.startsWith('backup-')), r.data);
-const name = r.data.rows[0].name;
-check('backup file download', (await a.get(`/admin/backups/${name}`)).status === 200);
+if (r.status === 400 && /not available on this hosting/.test(r.data?.error || '')) {
+  // Serverless hosting (Vercel) has no permanent disk: backup files are disabled on purpose, with a clear message.
+  check('backup files clearly unavailable on serverless hosting', (await a.get('/admin/backups')).data.unavailable);
+} else {
+  check('daily backup file written', r.status === 200 && r.data.rows.some(b => b.name.startsWith('backup-')), r.data);
+  const name = r.data.rows[0].name;
+  check('backup file download', (await a.get(`/admin/backups/${name}`)).status === 200);
+}
 check('path traversal blocked', (await a.get('/admin/backups/..%2F..%2Fdata%2Fapp.db')).status === 404);
 done();
 

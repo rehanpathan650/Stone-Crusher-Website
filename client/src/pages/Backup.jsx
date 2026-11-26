@@ -12,11 +12,12 @@ export default function Backup() {
   const { can, refresh } = useAuth();
   const toast = useToast();
   const [rows, setRows] = useState(null);
+  const [unavailable, setUnavailable] = useState('');
   const [restore, setRestore] = useState(null); // { file, data }
   const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(() => api('/admin/backups').then(d => setRows(d.rows)).catch(e => toast(e.message, 'error')), [toast]);
+  const load = useCallback(() => api('/admin/backups').then(d => { setRows(d.rows); setUnavailable(d.unavailable || ''); }).catch(e => toast(e.message, 'error')), [toast]);
   useEffect(() => { if (can('backup')) load(); }, [load, can]);
   if (!can('backup')) return <NoAccess />;
 
@@ -71,8 +72,9 @@ export default function Backup() {
 
       <div className="grid grid-2">
         <div className="card">
-          <div className="card-head"><h3>Automatic daily backups</h3><span className="spacer" /><button className="btn btn-sm" onClick={runNow}>Run today's backup</button></div>
-          {!rows ? <div className="loading-bar" /> : !rows.length ? <Empty title="No backups yet">The server writes one every day.</Empty> : (
+          <div className="card-head"><h3>Automatic daily backups</h3><span className="spacer" />{!unavailable && <button className="btn btn-sm" onClick={runNow}>Run today's backup</button>}</div>
+          {unavailable ? <Empty title="Not available on this hosting" icon="database">{unavailable}</Empty>
+            : !rows ? <div className="loading-bar" /> : !rows.length ? <Empty title="No backups yet">The server writes one every day.</Empty> : (
             <div className="table-wrap">
               <table className="table-cards">
                 <thead><tr><th>File</th><th className="num">Size</th><th className="actions" /></tr></thead>

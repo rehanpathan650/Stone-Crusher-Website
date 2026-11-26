@@ -4,6 +4,9 @@ import { audit } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { today, log } from '../lib/util.js';
 import { createBackup, restoreBackup, listBackups, backupPath, dailyBackup } from '../services/backup.js';
+import { config } from '../config.js';
+
+const NO_FILES = 'Automatic backup files are not available on this hosting (it has no permanent disk). Use "Download backup now" and your database provider\'s backups.';
 
 const router = express.Router();
 router.use(requireAuth, requirePerm('backup'));
@@ -18,8 +21,9 @@ router.get('/backup', async (req, res) => {
 });
 
 /** Daily automatic backups kept on the server. */
-router.get('/backups', (req, res) => res.json({ rows: listBackups() }));
+router.get('/backups', (req, res) => res.json(config.serverless ? { rows: [], unavailable: NO_FILES } : { rows: listBackups() }));
 router.post('/backups/run', async (req, res) => {
+  if (config.serverless) throw badRequest(NO_FILES);
   const name = await dailyBackup();
   res.json({ created: name, rows: listBackups() });
 });
