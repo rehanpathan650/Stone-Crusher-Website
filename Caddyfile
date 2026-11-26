@@ -1,0 +1,15 @@
+# Caddy obtains and renews a free HTTPS certificate for {$DOMAIN} automatically.
+# With DOMAIN=localhost or an IP address (office network) it uses its own
+# local certificate instead; browsers show a one-time warning for that.
+{
+	# Browsers send no site name when opened by IP address; use this certificate then.
+	default_sni {$DOMAIN}
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy app:4000
+	header {
+		-Server
+	}
+}

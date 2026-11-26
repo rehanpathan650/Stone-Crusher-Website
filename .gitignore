@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules/
+client/dist/
+
+# Secrets and local configuration: never commit these
+.env
+**/.env
+.env.*
+!.env.example
+LOGINS.txt
+office-certificate.crt
+.claude/
+
+# Data, databases and backups (contain business data and password hashes)
+server/data/
+*.db
+*.db-*
+*.sqlite
+*.sql
+backups/
+
+# Logs and editor files
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

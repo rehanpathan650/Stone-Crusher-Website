@@ -1,0 +1,15 @@
+{
+  "name": "stone-crusher-app",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Stone crusher business management: sales, production, stock, finance, payroll",
+  "scripts": {
+    "setup": "npm --prefix server install && npm --prefix client install",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start",
+    "dev:api": "npm --prefix server run dev",
+    "dev:web": "npm --prefix client run dev",
+    "seed:demo": "npm --prefix server run seed:demo",
+    "create-admin": "npm --prefix server run create-admin --"
+  }
+}

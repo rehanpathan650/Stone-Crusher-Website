@@ -1,0 +1,82 @@
+# Production stack: PostgreSQL + app + Caddy (automatic HTTPS).
+#   1. Copy .env.example to .env and set DOMAIN and POSTGRES_PASSWORD
+#   2. docker compose up -d --build
+#   3. docker compose logs app   -> copy the first-run setup code
+# Docker keeps at most 5 × 10 MB of logs per container instead of growing forever.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: crusher
+      POSTGRES_USER: crusher
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crusher -d crusher"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published to the host: only the app can reach the database.
+
+  app:
+    build: .
+    restart: unless-stopped
+    logging: *logging
+    # Hardening: read-only filesystem (only the data volume and /tmp are writable),
+    # no extra Linux privileges, and none can be gained later.
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    stop_grace_period: 15s
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://crusher:${POSTGRES_PASSWORD}@db:5432/crusher
+      TRUST_PROXY: "1"
+      # "true" on a real server (HTTPS only). Set COOKIE_SECURE=false in .env
+      # to use plain http://localhost:APP_PORT on this computer.
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+    # Published only on this computer's loopback address (127.0.0.1), never to the
+    # network or internet; other devices go through Caddy over HTTPS.
+    ports:
+      - "127.0.0.1:${APP_PORT:-4000}:4000"
+    volumes:
+      - appdata:/app/server/data # automatic daily backups (data/backups)
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  appdata:
+  caddy_data:
+  caddy_config:
